@@ -8,11 +8,11 @@ const verdant = require('verdant')
 const express = require('express')
 const app = express()
 
-app.locals.shopAPI = verdant('shop/**/*.logic*')
+app.locals.shopAPI = verdant.load('shop/logic').api
 
 app.use('/shop', app.locals.shopAPI.hello)
 
-process.on('SIGINT', () => app.logic.reload())
+process.on('SIGINT', () => app.logic.load('shop/logic'))
 ```
 
 In the above example, a new namespace for e-shop API is created and every time

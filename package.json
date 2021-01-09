@@ -17,23 +17,42 @@
     "swap",
     "updater"
   ],
-  "files": [],
+  "files": [
+    "index.js",
+    "Verdant.js"
+  ],
   "scripts": {
-    "clean": "rimraf *.tmp *.l* reports yarn.lock",
+    "clean": "rimraf *.tmp *.l* reports yarn.lock test/files/*.tmp.*",
     "lint": "eslint .",
-    "purge": "rimraf *.tmp *.l* reports yarn.lock node_modules",
-    "test": "jest",
+    "purge": "npm run clean && rimraf node_modules",
+    "test": "nyc mocha 'test/**/*.spec.js'",
     "test:coverage": "codecov"
   },
-  "dependencies": {},
+  "dependencies": {
+    "assert-fine": "^1.2.2",
+    "chai": "^4.2.0",
+    "mocha": "^8.2.1",
+    "nyc": "^15.1.0"
+  },
   "devDependencies": {
     "codecov": "^3.8.1",
     "eslint": "^7.17.0",
-    "jest": "^26.6.3",
     "rimraf": "^3.0.2"
   },
   "engines": {
     "node": ">=10.15.1"
+  },
+  "nyc": {
+    "all": false,
+    "check-coverage": true,
+    "include": [
+      "Verdant.js"
+    ],
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ],
+    "report-dir": "./reports"
   },
   "private": false
 }
