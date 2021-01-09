@@ -1,13 +1,22 @@
 {
   "name": "verdant",
   "version": "0.0.1",
-  "description": "Code modules live updater for Contnuous Development.",
+  "description": "Code modules live updater for Continuous Development.",
   "main": "index.js",
   "homepage": "",
-  "repository": "git://github.com/valango/PROJECT.git",
+  "repository": "git://github.com/valango/verdant.git",
   "author": "Villem Alango <villem.alango@gmail.com>",
   "license": "MIT",
-  "keywords": [],
+  "keywords": [
+    "continuous",
+    "deployment",
+    "devops",
+    "hot",
+    "reload",
+    "reloader",
+    "swap",
+    "updater"
+  ],
   "files": [],
   "scripts": {
     "clean": "rimraf *.tmp *.l* reports yarn.lock",
