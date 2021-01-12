@@ -54,6 +54,7 @@ protocol, except the
 
 **`Verdant`**`( [ options : object | string[] ] )` constructor.<br />
 The valid _`options`_ object keys are:
+   - **_`async`_** `: boolean `- if set, forces either fully async or fully sync operation;
    - **_`attacher`_** `: string `- [attach](#attaching) hook name, def: `'attach'`;
    - **_`detacher`_** `: string `- [detach](#detaching) hook name, def: `'detach'`;
    - **_`dirPath`_** `: string `- def: _`__dirpath`_ of the parent module;

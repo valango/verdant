@@ -20,28 +20,28 @@ describe('basic functionality', () => {
   before(() => copy('json', 2))
 
   it('should load statics', () => {
-    t = verdant(__dirname, { context })
+    t = verdant({ __dirname })
 
     context.api = t.api
-    t.load('./files/json.tmp.json')
+    t.add('./files/json.tmp.json')
     expect(context.api.name).to.eql('json2')
     expect(context.api.other).to.eql(true)
   })
 
   it('should reload statics', () => {
     copy('json', 1)
-    t.load('./files/json.tmp.json')
+    t.reloadSync('./files/json.tmp.json')
     expect(context.api.name).to.eql('json1')
     expect(context.api.other).to.eql(undefined)
   })
 
   it('should do async', async () => {
     copy('js', 1)
-    t.load('./files/js.tmp')
+    t.add('./files/js.tmp').attach(context)
     copy('js', 2)
     expect(context.api.compute(1)).to.equal(2)
     const res = context.api.slow(1)
-    t.load('./files/js.tmp')
+    t.reloadSync()
     const r = await res
     expect(r).to.equal(4)
     expect(context.history).to.eql(['js1 1', 'js1slow 1', 'js2 1'])

@@ -1,32 +1,45 @@
 'use strict'
 
 const assert = require('assert-fine')
-const { isAbsolute, resolve } = require('path')
+const { format } = require('util')
+const { resolve } = require('path')
 const { cache } = require
 const { ownKeys } = Reflect
 const noop = () => undefined
+const nothing = Symbol('nothing')
+const direct = Symbol('direct')     //  This loadable is not i.
 
 const ME = 'Verdant'
 
+/**
+ * @typedef {Object} TLoadable
+ * @property {Object} [api]     - API after initialization
+ * @property {Object} context   - initialization context
+ * @property {function()} detach
+ * @property {Object} exports   - module exports
+ * @property {string} path      - the original add(path) argument
+ * @property {Object} paths     - all paths (including the main module)
+ */
+
 const defaultOptions = {
-  key4attach: 'attach',
-  key4detach: 'detach'
+  attach: 'attach',
+  detach: 'detach',
+  __dirname: require.main.path,
+  paths: [],
+  strict: process.env.NODE_ENV === 'production'
 }
 
 const readOnly = (obj, prop) => assert(0, '%s: property %o is read-only', ME, prop)
 
 class Verdant {
-  constructor (dirName, options = undefined) {
-    assert(dirName && typeof dirName === 'string', '%s: invalid directory %o', ME, dirName)
-    assert(isAbsolute(dirName), '%s: invalid directory %o', ME, dirName)
-    const opts = { ...defaultOptions, ...options }
-    this.context = opts.context
-    this.key4attach = opts.key4attach
-    this.key4detach = opts.key4detach
-    this._dir = dirName
+  constructor (options = undefined) {
+    let opts = Array.isArray(options) ? { paths: options } : options
+    if (!opts.dirName) opts.dirName = opts.__dirname
+    this._opts = opts = { ...defaultOptions, ...opts }
+    this._busy = false
     this._current = Object.create(null)
-    this._sequence = []
-    this._map = new Map()
+    /** @type {TLoadable[]} */
+    this._loaded = []
     this._api = new Proxy(this._current, {
       deleteProperty: readOnly,
       //  Never provide the actual object/function reference!
@@ -44,82 +57,168 @@ class Verdant {
       },
       set: readOnly
     })
+    this._opts.paths.forEach(path => this.add(path))
+  }
+
+  /**
+   *
+   * @param {string} path
+   */
+  add (path) {
+    const { attach, detach } = this._opts
+    const { api, paths, exports } = this.load_(path)
+    let context = nothing
+
+    if (paths.length) {
+      if (api && typeof api === 'object' &&
+        typeof api[attach] !== 'function' && typeof api[detach] !== 'function') {
+        context = direct
+      }
+      const rec = { api, context, detach: noop, exports, path, paths }
+      this._loaded.push(rec)
+      if (context === direct) this.expose_([rec])
+    }
+    return this
+  }
+
+  load_ (path) {
+    const length = ownKeys(cache).length
+    const toLoad = path[0] === '.' ? resolve(this._opts.dirName, path) : path
+    const api = require(toLoad)
+    const paths = ownKeys(cache).slice(length)
+    return { api, exports: api, paths }
   }
 
   get api () {
     return this._api
   }
 
-  get loadOrder () {
-    return this._sequence.slice()
+  attach_ (loadables, ctx = nothing) {
+    let api, res
+    const { async, attach, detach } = this._opts, promises = []
+
+    for (const loadable of loadables) {
+      if (ctx !== nothing) loadable.context = ctx
+      const { context, exports, path } = loadable
+
+      if (typeof exports === 'function') {
+        assert(!((api = exports(context)) instanceof Promise),
+          '%s: %o wrapper returned a promise', ME, path)
+        api = { ...exports, ...api }
+      } else {
+        api = { ...exports }
+      }
+
+      if (typeof (res = api[attach]) === 'function') {
+        if ((res = res(context)) instanceof Promise || async) {
+          if (async === false) this.complain('%o.%s returned a promise', path, attach)
+          promises.push(res)
+        }
+        delete api[attach]
+      }
+      if (typeof (res = api[detach]) === 'function') {
+        loadable.detach = res
+        delete api[detach]
+      }
+      loadable.api = api
+    }
+    if (async) promises.push(0)
+    return promises
   }
 
   /**
-   * (Re)loads the module by path.
-   * @param {string} path
-   * @returns {string[]} paths loaded - the first one is of the main module.
+   *
+   * @param {Object} [context]
    */
-  load_ (path) {
-    const fullPath = path[0] === '.' ? resolve(this._dir, path) : path
-    const before = new Set(ownKeys(cache))
-    require(fullPath)               //  Fills in the cache[fullPath].exports!
-    return ownKeys(cache).filter(k => !before.has(k))
+  attach (context = undefined) {
+    const loadables = this._loaded.filter(
+      rec => rec.context !== context && rec.context !== direct)
+    const promises = this.attach_(loadables, context)
+
+    return promises.length
+      ? Promise.all(promises).then(() => this.expose_(loadables).api)
+      : this.expose_(loadables).api
   }
 
-  /**
-   * Loads or reloads a module by path, registers and attaches it.
-   * @param {string} path
-   * @returns {Verdant|Promise<Verdant>}
-   */
-  load (path) {
-    const { _map } = this
-    if (!_map) return this                 //  Sorry, I am revoked!
+  complain (fmt, ...args) {
+    const message = ME + ':' + format(fmt, ...args)
 
-    if (_map.has(path)) {
-      const { api, paths } = this._map.get(path)
+    if (this._opts.strict) throw new Error(message)
 
-      ;(api[this.key4detach] || noop)()
-      paths.forEach(path => {
-        delete cache[path]
-      })
-    }
-    const { context } = this
-    const paths = this.load_(path)
-    const { exports } = cache[paths[0]]
-    const api = typeof exports === 'function'
-      ? exports(context)
-      : exports
-    assert(!(api instanceof Promise), '%s: asynchronous default export of %o', path)
-    const hook = api[this.key4attach]
-    const result = typeof hook === 'function' && hook.call(api, context)
-
-    return result instanceof Promise
-      ? result.then(() => this.exposeApi_(api, path)) && _map.set(path, { api, paths }) && this
-      : this.exposeApi_(api, path) && _map.set(path, { api, paths }) && this
-  }
-
-  exposeApi_ (api, path) {
-    const { _current, _map, key4attach, key4detach } = this
-    const oldKeys = _map.has(path) && new Set(ownKeys(_map.get(path).api))
-
-    for (const key in api) {
-      if (oldKeys) oldKeys.delete(key)
-      if (key === key4attach || key === key4detach) continue
-      assert(oldKeys || _current[key] === undefined, '%s: conflicting key %o of %o', ME, key, path)
-      _current[key] = api[key]
-    }
-    oldKeys
-      ? oldKeys.forEach(key => (_current[key] = undefined))
-      : this._sequence.push(path)
-
+    process.stderr.write(message + '\n')
     return this
   }
 
-  reloadAllSync () {
-    for (const path of this.loadOrder) {
-      assert(!(this.load(path) instanceof Promise),
-        '%s: %o path has asynchronous %s()', ME, path, this.key4attach)
+  /**
+   * @param filter
+   * @returns {Promise<Verdant>|Verdant}
+   * @private
+   */
+  reload_ (filter) {
+    let loadables
+
+    if (filter) {
+      if (filter instanceof RegExp) {
+        loadables = this._loaded.filter(rec => filter.test(rec.path))
+      } else {
+        loadables = this._loaded.filter(rec => rec.path === filter)
+      }
+    } else {
+      loadables = this._loaded.slice()
     }
+    if (loadables.length === 0 && this._loaded.length !== 0) {
+      this.complain('%s.reload(%o): nothing matches', ME, filter)
+      return this._opts.async ? Promise.resolve(this) : this
+    }
+    //  Collect the old API keys and invalidate the require.cache
+    const oldKeys = [], detachers = []
+
+    for (const loadable of loadables) {
+      ownKeys(loadable.api).forEach(key => oldKeys.push(key))
+      loadable.paths.forEach(path => delete cache[path])
+    }
+    //  Re-load all the affected loadables.
+    for (const loadable of loadables) {
+      const loaded = this.load_(loadable.path)
+      assert(loaded.paths.length, '%s.reload(): nothing loaded for %o', ME, loadable.path)
+      Object.assign(loadable, loaded)
+    }
+
+    this._busy = true
+
+    const done = this.attach_(loadables)  //  Initialize new API-s
+
+    return done instanceof Promise
+      ? done.then(() => this.expose_(loadables, oldKeys, detachers))
+      : this.expose_(loadables, oldKeys, detachers)
+  }
+
+  reload (filter = undefined) {
+    assert(this._opts.async !== false, '%s.reload() called in synchronous mode', ME)
+    if (this._busy) return Promise.resolve(this)
+    const result = this.reload_(filter)
+    return result instanceof Promise ? result.then(() => this) : Promise.resolve(this)
+  }
+
+  reloadSync (filter = undefined) {
+    if (this._busy) return this
+    const result = this.reload_(filter)
+    assert(!(result instanceof Promise), '%s.reloadSync() had a promise', ME)
+    return result
+  }
+
+  expose_ (loadables, oldKeys = undefined, detachers = undefined) {
+    const { _current } = this
+
+    detachers && detachers.forEach(fn => fn())
+    oldKeys && oldKeys.forEach(key => delete _current[key])
+    loadables.forEach(({ api, path }) => {
+      for (const key of ownKeys(api)) {
+        assert(_current[key] === undefined, '%s.expose: key %o conflict in %o', ME, key, path)
+        _current[key] = api[key]
+      }
+    })
+    this._busy = false
     return this
   }
 
@@ -127,13 +226,13 @@ class Verdant {
    * A local analogue of Proxy.revoke()
    */
   revoke () {
-    if (this._map) {
+    if (this._loaded) {
       const { _current } = this
 
       for (const key in _current) {
         if (typeof _current[key] === 'function') _current[key] = noop
       }
-      this._map = undefined
+      this._loaded = undefined
     }
   }
 }
