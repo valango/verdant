@@ -29,14 +29,14 @@
     "test:coverage": "codecov"
   },
   "dependencies": {
-    "assert-fine": "^1.2.2",
-    "chai": "^4.2.0",
-    "mocha": "^8.2.1",
-    "nyc": "^15.1.0"
+    "assert-fine": "^1.2.2"
   },
   "devDependencies": {
+    "chai": "^4.2.0",
     "codecov": "^3.8.1",
     "eslint": "^7.17.0",
+    "mocha": "^8.2.1",
+    "nyc": "^15.1.0",
     "rimraf": "^3.0.2"
   },
   "engines": {

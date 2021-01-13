@@ -2,6 +2,6 @@
 
 const Verdant = require('./Verdant')
 
-exports = module.exports = (dir, options = undefined) => new Verdant(dir, options)
+exports = module.exports = (options = undefined) => new Verdant(options)
 
 exports.verdant = exports
