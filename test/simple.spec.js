@@ -20,7 +20,7 @@ describe('basic functionality', () => {
   before(() => copy('json', 2))
 
   it('should load statics', () => {
-    t = verdant({ __dirname })
+    t = verdant({ __dirname, strict: true })
 
     context.api = t.api
     t.add('./files/json.tmp.json')
@@ -41,10 +41,14 @@ describe('basic functionality', () => {
     copy('js', 2)
     expect(context.api.compute(1)).to.equal(2)
     const res = context.api.slow(1)
-    t.reloadSync()
+    await t.reload()
     const r = await res
     expect(r).to.equal(4)
     expect(context.history).to.eql(['js1 1', 'js1slow 1', 'js2 1'])
+  })
+
+  it('complain about no match',()=>{
+    expect(()=>t.reload('nope')).to.throw('nothing matches')
   })
 
   it('should be redd-only', () => {

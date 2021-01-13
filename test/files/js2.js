@@ -4,6 +4,7 @@ module.exports = (context) => {
   context.history || (context.history = [])
 
   return {
+    attach: async () => 0,
     compute: x => {
       context.history.push('js2 ' + x)
       return 3 + x
