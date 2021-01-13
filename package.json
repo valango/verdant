@@ -1,7 +1,7 @@
 {
-  "name": "verdant",
+  "name": "greenium",
   "version": "0.1.0",
-  "description": "Code modules live updater for Continuous Development.",
+  "description": "Makes your Node.js app Continuous Deployment capable.",
   "main": "index.js",
   "homepage": "",
   "repository": "git://github.com/valango/verdant.git",

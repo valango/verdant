@@ -1,6 +1,6 @@
-# verdant [![Build Status](https://travis-ci.org/valango/verdant.svg?branch=master)](https://travis-ci.org/valango/verdant) [![Code coverage](https://codecov.io/gh/valango/verdant/branch/master/graph/badge.svg)](https://codecov.io/gh/valango/verdant)
+# greenium [![Build Status](https://travis-ci.org/valango/verdant.svg?branch=master)](https://travis-ci.org/valango/verdant) [![Code coverage](https://codecov.io/gh/valango/verdant/branch/master/graph/badge.svg)](https://codecov.io/gh/valango/verdant)
 
-The _**verdant**_ package makes your Node.js app evergreen by
+This package makes your Node.js app evergreen by
 becoming _**Continuous Deployment** capable_.
 
 It uses a very simple API and has only few limitations for your code.
@@ -8,7 +8,7 @@ The main goal of writing _this package_ was to avoid the demanding micro-service
 in early stages of application life cycle, while still having _Continuous Deployment_ on
 from _the day one_.
 
-Unlike some other similar packages, _`verdant`_ does not modify any of Node.js
+Unlike some other similar packages, _`greenium`_ does not modify any of Node.js
 original behavior.
 
 * [Usage](#usage)
@@ -21,7 +21,7 @@ original behavior.
 Of course, it should be installed:
 
 ```
-yarn add verdant   # npm i -S verdant
+yarn add greenium   # npm i -S greenium
 ```
 ...before it can be used in your code:
 
@@ -29,7 +29,7 @@ yarn add verdant   # npm i -S verdant
 const express = require('express')
 const app = express()
 // Commented out:   const shopAPI = require('./shop')
-const verdant = require('verdant')(['./shop']) 
+const verdant = require('greenium')(['./shop']) 
 const shopAPI = verdant.attach(app.locals)
 process.on('SIGPIPE', () => verdant.reload())     //  Admin pressing the "red button".
 // The rest of the application code remains unchanged.
@@ -43,7 +43,7 @@ the app receives the `SIGPIPE`, it re-loads its (hopefully fixed) source code ag
 
 The bad news is, that instead of having just line #3, you ended up adding _two extra lines_ 😖.
 
-**NOTE:** the _`verdant`_ package _does not_ depend on _express.js_ or on any particular
+**NOTE:** the _`greenium`_ package _does not_ depend on _express.js_ or on any particular
 protocol, except the 
 [Node.js `module API`](https://nodejs.org/dist/latest-v14.x/docs/api/modules.html#modules_the_module_scope).
 
@@ -156,7 +156,7 @@ After all the requests targeting this instance, are gone
 from [Node.js event queue](https://nodejs.dev/learn/the-nodejs-event-loop), 
 the _garbage collector_ should kick in automatically.
 
-### What verdant does
+### What greenium does
 After loading a source code module, _`Verdant`_ instance exposes the module API
 via its _`api`_ instance property, which is actually a proxy. This way, the rest of
 application code will not see actual data references - so when the module
