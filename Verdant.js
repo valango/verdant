@@ -34,8 +34,8 @@ const readOnly = (obj, prop) => assert(0, '%s: property %o is read-only', ME, pr
 class Verdant {
   constructor (options = undefined) {
     let opts = Array.isArray(options) ? { paths: options } : options
-    if (!opts.dirName) opts.dirName = opts.__dirname
     this._opts = opts = { ...defaultOptions, ...opts }
+    if (!opts.dirName) opts.dirName = opts.__dirname
     this._busy = false
     this._current = Object.create(null)
     /** @type {TLoadable[]} */

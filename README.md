@@ -1,3 +1,5 @@
+# verdant [![Build Status](https://travis-ci.org/valango/verdant.svg?branch=master)](https://travis-ci.org/valango/verdant) [![Code coverage](https://codecov.io/gh/valango/verdant/branch/master/graph/badge.svg)](https://codecov.io/gh/valango/verdant)
+
 The _**verdant**_ package makes your Node.js app evergreen by
 becoming _**Continuous Deployment** capable_.
 
@@ -46,6 +48,10 @@ protocol, except the
 [Node.js `module API`](https://nodejs.org/dist/latest-v14.x/docs/api/modules.html#modules_the_module_scope).
 
 ## API
+**NOTE:** The _asynchronous_ attach / reload will probably not supported in next releases.
+The real-world experience has shown that those fancy features create more problems than
+they can solve.
+
 ### Package exports
    1. _**`Verdant`**_: the object class / constructor - useful for derived classes;
    1. **_`verdant`_**: the factory function, also the default export.
@@ -182,7 +188,7 @@ Names in loadable API-s should not overlap - if any part of API collides with an
 some other module, an exception will be thrown.
 
 ## Compatibility
-The package relies on _javascript `Proxy`_, so it needs Node.js v6.0 or higher.
+This package requires Node.js v10.15.1 or higher.
 
 _The package_ may fail, if Node.js _`require`_ subsystem is modified in any way.
 For this particular reason, good 'ol _**mocha**_, not the magnificent _**jest**_, 
