@@ -1,6 +1,6 @@
 {
   "name": "verdant",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Code modules live updater for Continuous Development.",
   "main": "index.js",
   "homepage": "",
