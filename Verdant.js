@@ -7,7 +7,7 @@ const { cache } = require
 const { ownKeys } = Reflect
 const noop = () => undefined
 const nothing = Symbol('nothing')
-const direct = Symbol('direct')     //  This loadable is not i.
+const direct = Symbol('direct')     //  This loadable should not be initialized.
 
 const ME = 'Verdant'
 
@@ -22,11 +22,11 @@ const ME = 'Verdant'
  */
 
 const defaultOptions = {
-  attach: 'attach',
-  detach: 'detach',
-  __dirname: require.main.path,
-  paths: [],
-  strict: process.env.NODE_ENV === 'production'
+  attach: 'attach',               //  Attach hook name used by loadables.
+  detach: 'detach',               //  Detach hook name.
+  __dirname: require.main.path,   //  Good ol require() stuff.
+  paths: [],                      //  Paths to be loaded immediately.
+  strict: process.env.NODE_ENV === 'production' //  Do not complain, throw!
 }
 
 const readOnly = (obj, prop) => assert(0, '%s: property %o is read-only', ME, prop)
@@ -61,7 +61,7 @@ class Verdant {
   }
 
   /**
-   *
+   * Loads and registers a loadable.
    * @param {string} path
    */
   add (path) {
@@ -70,6 +70,7 @@ class Verdant {
     let context = nothing
 
     if (paths.length) {
+      //  If the loaded API is pure static, then disable any attach/detach stuff.
       if (api && typeof api === 'object' &&
         typeof api[attach] !== 'function' && typeof api[detach] !== 'function') {
         context = direct
@@ -89,6 +90,10 @@ class Verdant {
     return { api, exports: api, paths }
   }
 
+  /**
+   * This thing does not change over reloads.
+   * @type {Proxy<Object>}
+   */
   get api () {
     return this._api
   }
@@ -127,7 +132,7 @@ class Verdant {
   }
 
   /**
-   *
+   * Initialize all fresh loadables with the given context.
    * @param {Object} [context]
    */
   attach (context = undefined) {
@@ -140,6 +145,12 @@ class Verdant {
       : this.expose_(loadables).api
   }
 
+  /**
+   * Say unpleasant things or throw an exception.
+   * @param {string} fmt
+   * @param args
+   * @returns {Verdant}
+   */
   complain (fmt, ...args) {
     const message = ME + ':' + format(fmt, ...args)
 
@@ -150,7 +161,7 @@ class Verdant {
   }
 
   /**
-   * @param filter
+   * @param {string|RegExp} filter
    * @returns {Promise<Verdant>|Verdant}
    * @private
    */
@@ -193,6 +204,12 @@ class Verdant {
       : this.expose_(loadables, oldKeys, detachers)
   }
 
+  /**
+   * Reload all the stuff that has been initialized already.
+   * NB: this part of async API wil be probably removed!
+   * @param {string|RegExp} filter
+   * @returns {Verdant|Promise<Verdant>}
+   */
   reload (filter = undefined) {
     assert(this._opts.async !== false, '%s.reload() called in synchronous mode', ME)
     if (this._busy) return Promise.resolve(this)
@@ -200,6 +217,12 @@ class Verdant {
     return result instanceof Promise ? result.then(() => this) : Promise.resolve(this)
   }
 
+  /**
+   * Reload all the stuff that has been initialized already.
+   *
+   * @param {string|RegExp} filter
+   * @returns {Verdant}
+   */
   reloadSync (filter = undefined) {
     if (this._busy) return this
     const result = this.reload_(filter)
@@ -207,6 +230,14 @@ class Verdant {
     return result
   }
 
+  /**
+   * Aggregates and exposes the sub-API-s.
+   * @param {TLoadable[]} loadables
+   * @param {string[]} oldKeys
+   * @param {function()[]} detachers
+   * @returns {Verdant}
+   * @private
+   */
   expose_ (loadables, oldKeys = undefined, detachers = undefined) {
     const { _current } = this
 
@@ -223,7 +254,7 @@ class Verdant {
   }
 
   /**
-   * A local analogue of Proxy.revoke()
+   * A local analogue of Proxy.prototype.revoke()
    */
   revoke () {
     if (this._loaded) {
